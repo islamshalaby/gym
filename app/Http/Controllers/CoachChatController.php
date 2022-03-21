@@ -171,7 +171,7 @@ class CoachChatController extends Controller
                         ->update(['deleted'=>'0']);
                     $conv_data['last_message_id'] = $message->id;
                     Conversation::find($input['conversation_id'])->update($conv_data);
-                    Participant::where('conversation_id',$input['conversation_id'])->update(['updated_at'=>Carbon::now(), 'deleted' => 0]);
+                    Participant::where('conversation_id',$input['conversation_id'])->update(['updated_at'=>Carbon::now(), 'deleted' => "0"]);
                 }
                 //begin use firebase to send message
                 $fb_token = $other_user->User->fcm_token;
