@@ -60,6 +60,7 @@ class AdController extends AdminController{
         $data['ad'] = Ad::find($request->id);
         $data['users'] = User::orderBy('created_at', 'desc')->get();
         $data['halls'] = Hole::where('deleted','0')->orderBy('sort' , 'asc')->get();
+        $data['stores'] = Shop::orderBy('sort' , 'asc')->get();
         $data['coaches'] = Coach::where('is_confirm','accepted')->where('deleted','0')->get();
         if ($data['ad']['type'] == 'id') {
             $data['product'] = Product::find($data['ad']['content']);
@@ -81,10 +82,7 @@ class AdController extends AdminController{
             $image_new_name = $image_id . '.' . $image_format;
             $ad->image = $image_new_name;
         }
-        $ad->title_ar = $request->title_ar;
-        $ad->title_en = $request->title_en;
-        $ad->desc_ar = $request->desc_ar;
-        $ad->desc_en = $request->desc_en;
+        
         $ad->type = $request->type;
         if($request->type == 'link'){
             $ad->content = $request->content;
@@ -92,6 +90,8 @@ class AdController extends AdminController{
             $ad->content = $request->hall;
         }else if($request->type == 'coach'){
             $ad->content = $request->coach;
+        }else if($request->type == 'store') {
+            $ad->content = $request->store;
         }
         $ad->save();
         session()->flash('success', trans('messages.updated_s'));

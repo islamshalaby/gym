@@ -136,6 +136,7 @@ class CoachChatController extends Controller
                 }
                 $other_user = Participant::where('conversation_id', $input['conversation_id'])->where('user_id', '!=', $coach->id)->first();
                 $input['user_id'] = $coach->id;
+                
                 $input['user_type'] = 'coach';
                 $input['coach_id'] = $coach->id;
                 if ($request->type == 'text') {
@@ -170,7 +171,7 @@ class CoachChatController extends Controller
                         ->update(['deleted'=>'0']);
                     $conv_data['last_message_id'] = $message->id;
                     Conversation::find($input['conversation_id'])->update($conv_data);
-                    Participant::where('conversation_id',$input['conversation_id'])->update(['updated_at'=>Carbon::now()]);
+                    Participant::where('conversation_id',$input['conversation_id'])->update(['updated_at'=>Carbon::now(), 'deleted' => 0]);
                 }
                 //begin use firebase to send message
                 $fb_token = $other_user->User->fcm_token;
