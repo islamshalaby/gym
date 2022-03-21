@@ -36,12 +36,22 @@
                 $(".hall input").prop("disabled", false)
                 $(".outside").hide()
                 $(".coach").hide()
+                $(".store").hide()
             } else if (this.value == 'coach') {
                 $(".coach").show()
                 $('.productsParent').hide()
                 $('select#products').prop("disabled", true)
                 $(".coach input").prop("disabled", false)
                 $(".outside").hide()
+                $(".hall").hide()
+                $(".store").hide()
+            }else if (this.value == 'store') {
+                $(".store").show()
+                $('.productsParent').hide()
+                $('select#products').prop("disabled", true)
+                $(".store input").prop("disabled", false)
+                $(".outside").hide()
+                $(".coach").hide()
                 $(".hall").hide()
             }
         })
@@ -70,24 +80,7 @@
                         </label>
                         <div class="custom-file-container__image-preview"></div>
                     </div>
-                    <div class="form-group mb-4">
-                        <label for="title_ar">{{ __('messages.title_ar') }}</label>
-                        <input type="text" name="title_ar" class="form-control" id="title_ar">
-                    </div>
-                    <div class="form-group mb-4">
-                        <label for="title_en">{{ __('messages.title_en') }}</label>
-                        <input type="text" name="title_en" class="form-control" id="title_en">
-                    </div>
-                    <div class="form-group mb-4">
-                        <label for="exampleFormControlTextarea1">{{ __('messages.desc_ar') }}</label>
-                        <textarea class="form-control" name="desc_ar" id="exampleFormControlTextarea1"
-                                  rows="3"></textarea>
-                    </div>
-                    <div class="form-group mb-4">
-                        <label for="exampleFormControlTextarea1">{{ __('messages.desc_en') }}</label>
-                        <textarea class="form-control" name="desc_en" id="exampleFormControlTextarea1"
-                                  rows="3"></textarea>
-                    </div>
+                    
                     <div class="form-group">
                         <label for="sel1">{{ __('messages.ad_type') }}</label>
                         <select id="ad_type" name="type" class="form-control">
@@ -95,6 +88,8 @@
                             <option value="link">{{ __('messages.outside_the_app') }}</option>
                             <option value="hall">{{ __('messages.hall') }}</option>
                             <option value="coach">{{ __('messages.coach') }}</option>
+                            <option value="store">{{ __('messages.store') }}</option>
+                            
                             {{--                    <option value="seller">{{ __('messages.seller') }}</option>--}}
                         </select>
                     </div>
@@ -118,6 +113,15 @@
                             <option selected>{{ __('messages.select') }}</option>
                             @foreach($data['coaches'] as $row)
                                 <option value="{{$row->id}}">{{ $row->coachname }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div style="display: none" class="form-group store">
+                        <label for="sel1">{{ __('messages.stores') }}</label>
+                        <select id="hall_cmb" name="store" class="form-control">
+                            <option selected>{{ __('messages.select') }}</option>
+                            @foreach($data['stores'] as $row)
+                                <option value="{{$row->id}}">{{ $row->name }}</option>
                             @endforeach
                         </select>
                     </div>

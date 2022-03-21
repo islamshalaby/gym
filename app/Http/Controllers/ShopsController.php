@@ -219,7 +219,9 @@ class ShopsController extends Controller
                 ->first();
             $data['categories'] = Category::select('id', 'image', 'title_' . $lang . ' as title')
                 ->where('deleted', 0)
-                ->has('products', '>', 0)
+                ->whereHas('products', function($q) use ($id) {
+                    $q->where('store_id', $id);
+                })
                 ->orderBy('created_at')
                 ->get()->map(function ($data) use ($request) {
                     if ($data->id == $request->category_id) {
