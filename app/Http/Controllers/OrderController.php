@@ -261,7 +261,8 @@ class OrderController extends Controller
                 'total_price' => $tPrice
             ]);
 
-            $data = [
+            $data = (object)[
+                "url" => "",
                 'main_order_number' => $u_main_order['main_order_number'],
                 'count' => $count,
                 'date' => $u_main_order['created_at']->format('Y-m-d'),
