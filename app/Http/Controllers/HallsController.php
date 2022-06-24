@@ -214,6 +214,16 @@ class HallsController extends Controller
 
     public function store_reservation(Request $request, $type)
     {
+        $validator = Validator::make($request->all(), [
+            'payment_method' => 'required',
+            'booking_id' => 'required'
+        ]);
+
+        if ($validator->fails()) {
+            $response = APIHelpers::createApiResponse(true , 406 , 'Missing Required Fields' , 'بعض الحقول مفقودة'  , null , $request->lang);
+            return response()->json($response , 406);
+        }
+
         if ($type == 'hall') {
             $booking = Hole_booking::where('id', $request->booking_id)->first();
         } else {
@@ -234,57 +244,126 @@ class HallsController extends Controller
         $admin_data = Admin::find(1);
         $bill_num = $admin_data->options_bill_num;
 
-        //save options selected in database
-        if ($request->option_id != null) {
-            foreach ($request->option_id as $key => $row) {
-                $test_data['option_id'] = $row;
-                $test_data['value'] = $request->option_value[$key];
-                $test_data['bill_num'] = $bill_num;
-                Reservation_options_test::create($test_data);
+        if ($request->payment_method == 1) {
+            if ($user->my_wallet < $price) {
+                $response = APIHelpers::createApiResponse(true , 406 , 'Not Enough wallet balance' , 'رصيد المحفظة لا يكفى' , null , $request->lang);
+                return response()->json($response , 406);
             }
+
+            //save options selected in database
+            if ($request->option_id != null) {
+                foreach ($request->option_id as $key => $row) {
+                    $test_data['option_id'] = $row;
+                    $test_data['value'] = $request->option_value[$key];
+                    $test_data['bill_num'] = $bill_num;
+                    Reservation_options_test::create($test_data);
+                }
+            }
+            $admin_data->options_bill_num = $admin_data->options_bill_num + 1;
+            $admin_data->save();
+
+            $data['user_id'] = $user->id;
+            $data['booking_id'] = $request->booking_id;
+            $data['price'] = $price;
+
+            if ($request->type == 'hall') {
+                $booking = Hole_booking::find($request->booking_id);
+            } else {
+                $booking = Coach_booking::find($request->booking_id);
+            }
+
+            $user->my_wallet = $user->my_wallet - $price;
+            $user->save();
+
+            $mytime = Carbon::now();
+            $today = Carbon::parse($mytime->toDateTimeString())->format('Y-m-d H:i');
+            $final_date = Carbon::createFromFormat('Y-m-d H:i', $today);
+            $final_expire_date = $final_date->addMonths($booking->months_num);
+            $data['expire_date'] = $final_expire_date;
+            $data['type'] = $request->type;
+            $data['payment'] = 'wallet';
+            $reserve = Reservation::create($data);
+            if ($reserve != null) {
+                if ($request->bill_num != null) {
+                    $res_test = Reservation_options_test::where('bill_num', $request->bill_num)->get();
+    
+                    foreach ($res_test as $key => $row) {
+                        $otion_data['reservation_id'] = $reserve->id;
+                        $otion_data['type_id'] = $row->option_id;
+                        $otion_data['goal_id'] = $row->value;
+                        Reservation_option::create($otion_data);
+                    }
+                    $updat_data_done['is_done'] = '1';
+                    Reservation_options_test::where('bill_num', $bill_num)->update($updat_data_done);
+                }
+                $income_Data['price'] = $price;
+                $income_Data['type'] = $request->type;
+                $income_Data['user_id'] = $user->id;
+                $income_Data['reservation_id'] = $reserve->id;
+                $income_Data['booking_id'] = $request->booking_id;
+                Income::create($income_Data);
+    
+                // to save points after reservation ...
+                $settings = Setting::where('id', 1)->first();
+                $points = $settings->points * $price;
+                $selected_user = User::find($data['user_id']);
+                $selected_user->points = $selected_user->points + $points;
+                $selected_user->save();
+                $data['url'] = "";
+            }
+        }else {
+            //save options selected in database
+            if ($request->option_id != null) {
+                foreach ($request->option_id as $key => $row) {
+                    $test_data['option_id'] = $row;
+                    $test_data['value'] = $request->option_value[$key];
+                    $test_data['bill_num'] = $bill_num;
+                    Reservation_options_test::create($test_data);
+                }
+            }
+            $admin_data->options_bill_num = $admin_data->options_bill_num + 1;
+            $admin_data->save();
+
+            $root_url = $request->root();
+            $path = 'https://apitest.myfatoorah.com/v2/SendPayment';
+            $token = "bearer rLtt6JWvbUHDDhsZnfpAhpYk4dxYDQkbcPTyGaKp2TYqQgG7FGZ5Th_WD53Oq8Ebz6A53njUoo1w3pjU1D4vs_ZMqFiz_j0urb_BH9Oq9VZoKFoJEDAbRZepGcQanImyYrry7Kt6MnMdgfG5jn4HngWoRdKduNNyP4kzcp3mRv7x00ahkm9LAK7ZRieg7k1PDAnBIOG3EyVSJ5kK4WLMvYr7sCwHbHcu4A5WwelxYK0GMJy37bNAarSJDFQsJ2ZvJjvMDmfWwDVFEVe_5tOomfVNt6bOg9mexbGjMrnHBnKnZR1vQbBtQieDlQepzTZMuQrSuKn-t5XZM7V6fCW7oP-uXGX-sMOajeX65JOf6XVpk29DP6ro8WTAflCDANC193yof8-f5_EYY-3hXhJj7RBXmizDpneEQDSaSz5sFk0sV5qPcARJ9zGG73vuGFyenjPPmtDtXtpx35A-BVcOSBYVIWe9kndG3nclfefjKEuZ3m4jL9Gg1h2JBvmXSMYiZtp9MR5I6pvbvylU_PP5xJFSjVTIz7IQSjcVGO41npnwIxRXNRxFOdIUHn0tjQ-7LwvEcTXyPsHXcMD8WtgBh-wxR8aKX7WPSsT1O8d8reb2aR7K3rkV3K82K_0OgawImEpwSvp9MNKynEAJQS6ZHe_J_l77652xwPNxMRTMASk1ZsJL";
+            $headers = array(
+                'Authorization:' . $token,
+                'Content-Type:application/json'
+            );
+
+
+            $call_back_url = $root_url . "/api/reservation/store/excute_pay?user_id=" . $user->id . "&booking_id=" . $request->booking_id .
+                "&bill_num=" . $bill_num .
+                "&price=" . $price .
+                "&type=" . $type;
+
+
+            $error_url = $root_url . "/api/pay/error";
+            $fields = array(
+                "CustomerName" => $user->name,
+                "NotificationOption" => "LNK",
+                "InvoiceValue" => $price,
+                "CallBackUrl" => $call_back_url,
+                "ErrorUrl" => $error_url,
+                "Language" => "AR",
+                "CustomerEmail" => $user->email
+            );
+
+            $payload = json_encode($fields);
+            $curl_session = curl_init();
+            curl_setopt($curl_session, CURLOPT_URL, $path);
+            curl_setopt($curl_session, CURLOPT_POST, true);
+            curl_setopt($curl_session, CURLOPT_HTTPHEADER, $headers);
+            curl_setopt($curl_session, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($curl_session, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($curl_session, CURLOPT_IPRESOLVE, CURLOPT_IPRESOLVE);
+            curl_setopt($curl_session, CURLOPT_POSTFIELDS, $payload);
+            $result = curl_exec($curl_session);
+            curl_close($curl_session);
+            $result = json_decode($result);
+            $data['url'] = $result->Data->InvoiceURL;
         }
-        $admin_data->options_bill_num = $admin_data->options_bill_num + 1;
-        $admin_data->save();
-
-        $root_url = $request->root();
-        $path = 'https://apitest.myfatoorah.com/v2/SendPayment';
-        $token = "bearer rLtt6JWvbUHDDhsZnfpAhpYk4dxYDQkbcPTyGaKp2TYqQgG7FGZ5Th_WD53Oq8Ebz6A53njUoo1w3pjU1D4vs_ZMqFiz_j0urb_BH9Oq9VZoKFoJEDAbRZepGcQanImyYrry7Kt6MnMdgfG5jn4HngWoRdKduNNyP4kzcp3mRv7x00ahkm9LAK7ZRieg7k1PDAnBIOG3EyVSJ5kK4WLMvYr7sCwHbHcu4A5WwelxYK0GMJy37bNAarSJDFQsJ2ZvJjvMDmfWwDVFEVe_5tOomfVNt6bOg9mexbGjMrnHBnKnZR1vQbBtQieDlQepzTZMuQrSuKn-t5XZM7V6fCW7oP-uXGX-sMOajeX65JOf6XVpk29DP6ro8WTAflCDANC193yof8-f5_EYY-3hXhJj7RBXmizDpneEQDSaSz5sFk0sV5qPcARJ9zGG73vuGFyenjPPmtDtXtpx35A-BVcOSBYVIWe9kndG3nclfefjKEuZ3m4jL9Gg1h2JBvmXSMYiZtp9MR5I6pvbvylU_PP5xJFSjVTIz7IQSjcVGO41npnwIxRXNRxFOdIUHn0tjQ-7LwvEcTXyPsHXcMD8WtgBh-wxR8aKX7WPSsT1O8d8reb2aR7K3rkV3K82K_0OgawImEpwSvp9MNKynEAJQS6ZHe_J_l77652xwPNxMRTMASk1ZsJL";
-        $headers = array(
-            'Authorization:' . $token,
-            'Content-Type:application/json'
-        );
-
-
-        $call_back_url = $root_url . "/api/reservation/store/excute_pay?user_id=" . $user->id . "&booking_id=" . $request->booking_id .
-            "&bill_num=" . $bill_num .
-            "&price=" . $price .
-            "&type=" . $type;
-
-
-        $error_url = $root_url . "/api/pay/error";
-        $fields = array(
-            "CustomerName" => $user->name,
-            "NotificationOption" => "LNK",
-            "InvoiceValue" => $price,
-            "CallBackUrl" => $call_back_url,
-            "ErrorUrl" => $error_url,
-            "Language" => "AR",
-            "CustomerEmail" => $user->email
-        );
-
-        $payload = json_encode($fields);
-        $curl_session = curl_init();
-        curl_setopt($curl_session, CURLOPT_URL, $path);
-        curl_setopt($curl_session, CURLOPT_POST, true);
-        curl_setopt($curl_session, CURLOPT_HTTPHEADER, $headers);
-        curl_setopt($curl_session, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($curl_session, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($curl_session, CURLOPT_IPRESOLVE, CURLOPT_IPRESOLVE);
-        curl_setopt($curl_session, CURLOPT_POSTFIELDS, $payload);
-        $result = curl_exec($curl_session);
-        curl_close($curl_session);
-        $result = json_decode($result);
-        $data['url'] = $result->Data->InvoiceURL;
         $response = APIHelpers::createApiResponse(false, 200, '', '', $data, $request->lang);
         return response()->json($response, 200);
     }

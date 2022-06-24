@@ -219,6 +219,7 @@ class HomeController extends Controller
         $package = Points_package::where('id', $id)->where('deleted', '0')->first();
         if ($package != null) {
             $user = auth()->user();
+			
             if ($package->points <= $user->points) {
                 $user = User::where('id', $user->id)->first();
                 $user->my_wallet = $user->my_wallet + $package->price;
@@ -230,7 +231,7 @@ class HomeController extends Controller
                 $response = APIHelpers::createApiResponse(false, 200, 'points exchanged successfully', 'تم استبدال النقاط بالمبلغ', $data, $request->lang);
                 return response()->json($response, 200);
             } else {
-                $response = APIHelpers::createApiResponse(false, 200, 'There are not enough points',
+                $response = APIHelpers::createApiResponse(true, 406, 'There are not enough points',
                     'لا يوجد نقاط كافية للاستبدال', (object)[], $request->lang);
                 return response()->json($response, 200);
             }

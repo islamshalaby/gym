@@ -51,8 +51,8 @@ class AddressController extends Controller
             'address_type' => 'required', // 1 home , 2 work
             'area_id' => 'required',
             'building' => 'required',
-            'floor' => 'required',
-            'apartment_number' => 'required',
+            'title' => 'required',
+            // 'apartment_number' => 'required',
             'street' => 'required',
             'phone' => 'required',
             'piece' => 'required',
@@ -69,8 +69,13 @@ class AddressController extends Controller
         $address->longitude = $request->longitude;
         $address->address_type = $request->address_type;
         $address->area_id = $request->area_id;
-        $address->floor = $request->floor;
-        $address->apartment_number = $request->apartment_number;
+        if ($request->floor) {
+            $address->floor = $request->floor;
+        }
+        if ($request->apartment_number) {
+            $address->apartment_number = $request->apartment_number;
+        }
+        
         $address->street = $request->street;
         $address->phone = $request->phone;
         $address->piece = $request->piece;
@@ -84,6 +89,7 @@ class AddressController extends Controller
         if($request->extra_details){
             $address->extra_details = $request->extra_details;
         }
+       
         $address->save();
         $response = APIHelpers::createApiResponse(false , 200 , '' , '' , $address , $request->lang);
         return response()->json($response , 200);

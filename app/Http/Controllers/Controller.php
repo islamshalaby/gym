@@ -13,11 +13,7 @@ class Controller extends BaseController
     public function upload($request)
     {
         $resizedVideo = cloudinary()->uploadVideo($request->getRealPath(), [
-            'folder' => 'uploads',
-            'transformation' => [
-                'width' => 350,
-                'height' => 200
-            ]
+            'folder' => 'uploads'
         ]);
 
         return $resizedVideo;
@@ -33,11 +29,7 @@ class Controller extends BaseController
     public function uploadFromApi($request)
     {
         $resizedVideo = cloudinary()->uploadVideo($request, [
-            'folder' => 'uploads',
-            'transformation' => [
-                'width' => 350,
-                'height' => 200
-            ]
+            'folder' => 'uploads'
         ]);
 
         return $resizedVideo;

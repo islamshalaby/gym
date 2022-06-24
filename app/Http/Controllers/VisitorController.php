@@ -83,10 +83,16 @@ class VisitorController extends Controller
 
 
         $visitor = Visitor::where('unique_id', $request->unique_id)->first();
+		
         if ($visitor) {
 
             $cart = Cart::where('visitor_id', $visitor->id)->where('product_id', $request->product_id)->first();
-            if ($product->remaining_quantity < 1) {
+			$count = $request->product_number;
+			if ($cart) {
+				$count = $cart->count + $request->product_number;
+			}
+			//dd($product->remaining_quantity);
+            if ($product->remaining_quantity < $count) {
                 $response = APIHelpers::createApiResponse(true, 406, 'The remaining amount of the product is not enough', 'الكميه المتبقيه من المنتج غير كافيه', null, $request->lang);
                 return response()->json($response, 406);
             }
@@ -160,7 +166,7 @@ class VisitorController extends Controller
                 $cart[$i]['offer_percentage'] = $product['offer_percentage'];
                 $cart[$i]['offer'] = $product['offer'];
                 $productCount = $cart[$i]['count'];
-                if ($product['free'] && $productCount > 2) {
+                if ($product['free'] && $productCount % 3 == 0) {
                     $productCount = $productCount - 1;
                 }
                 $sBPrice = $data['subtotal_price'] + ($product['final_price'] * $productCount);
@@ -339,16 +345,21 @@ class VisitorController extends Controller
                         $product['image'] = "";
                     }
                     if ($product['store_id'] == $get_stores[$n]['id']) {
-                        $sub_total_price = $sub_total_price + ($product['final_price'] * $cart[$k]['count']);
-                        $storeSubTotalPrice = $storeSubTotalPrice + ($product['final_price'] * $cart[$k]['count']);
-                        $storeTotalPrice = $storeTotalPrice + ($product['final_price'] * $cart[$k]['count']);
+                        $productCount = $cart[$k]['count'];
+                        if ($product['free'] && $productCount % 3 == 0) {
+                            $productCount = $productCount - 1;
+                        }
+                        $sub_total_price = $sub_total_price + ($product['final_price'] * $productCount);
+                        $storeSubTotalPrice = $storeSubTotalPrice + ($product['final_price'] * $productCount);
+
+                        $storeTotalPrice = $storeTotalPrice + ($product['final_price'] * $productCount);
                     }
                     if ($product['store_id'] == $get_stores[$n]['id']) {
                         array_push($store_products, $product['id']);
                         array_push($data['cart'][$n]['products'], $product);
                     }
                 }
-                $data['cart'][$n]['delivery_cost'] = $delivery['delivery_cost'];
+                $data['cart'][$n]['delivery_cost'] = (string)$delivery['delivery_cost'];
                 $data['cart'][$n]['sub_total_cost'] = (string)$storeSubTotalPrice;
                 $total = $storeTotalPrice + $delivery['delivery_cost'];
                 $data['cart'][$n]['total_cost'] = (string)$total;

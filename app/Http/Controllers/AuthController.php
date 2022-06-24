@@ -34,7 +34,7 @@ class AuthController extends Controller
         $credentials = request(['phone', 'password']);
         // dd(auth()->attempt($credentials));
         if (! $token = auth()->attempt($credentials)) {
-            $response  = APIHelpers::createApiResponse(true , 401 , 'Invalid phone or password' , 'يرجي التاكد من رقم الهاتف او كلمة المرور' , null , $request->lang);
+            $response  = APIHelpers::createApiResponse(true , 401 , 'Unregistered phone or Invalid password' , ' رقم الهاتف غير موجود او كلمة المرور غير صحيحة' , null , $request->lang);
             return response()->json($response, 401);
         }
         if(! $request->fcm_token || !$request->unique_id || !$request->type){
@@ -74,6 +74,21 @@ class AuthController extends Controller
     * create user
     */
     public function register(Request $request){
+		$messages = [
+            'name.required' => 'name is required field',
+            'phone.required' => 'phone is required field',
+            'email.required' => 'email is required field',
+            'password.required' => 'password is required field'
+        ];
+
+        if ($request->lang == 'ar') {
+            $messages = [
+                'name.required' => 'الاسم حقل مطلوب',
+                'phone.required' => 'رقم الهاتف حقل مطلوب',
+                'email.required' => 'البريد الإلكترونى حقل مطلوب',
+                'password.required' => 'كلمة المرور حقل مطلوب'
+            ];
+        }
         $validator = Validator::make($request->all(), [
             'name' => 'required',
             'phone' => 'required',
@@ -82,10 +97,10 @@ class AuthController extends Controller
             "fcm_token" => 'required',
             "type" => "required", // 1 -> iphone , 2 -> android
             "unique_id" => "required",
-        ]);
+        ], $messages);
 
         if ($validator->fails()) {
-            $response = APIHelpers::createApiResponse(true , 406 ,  'بعض الحقول مفقودة', 'بعض الحقول مفقودة' , null, $request->lang);
+            $response = APIHelpers::createApiResponse(true , 406 ,  $validator->messages()->first(), $validator->messages()->first() , null, $request->lang);
             return response()->json($response , 406);
         }
 
@@ -112,8 +127,8 @@ class AuthController extends Controller
         $user->email = $request->email;
         $user->password = Hash::make($request->password);
         $user->fcm_token = $request->fcm_token;
-        $user->free_balance = $user->free_balance + $free_balance;
-        $user->my_wallet = $user->my_wallet + $free_balance;
+        //$user->free_balance = $user->free_balance + $free_balance;
+        //$user->my_wallet = $user->my_wallet + $free_balance;
         $user->free_ads_count = 0;
         $user->save();
 

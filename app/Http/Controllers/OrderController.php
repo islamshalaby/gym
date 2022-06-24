@@ -98,12 +98,15 @@ class OrderController extends Controller
                                 $response = APIHelpers::createApiResponse(true , 406 , 'The remaining amount of the product is not enough' , 'الكميه المتبقيه من المنتج غير كافيه'  , null , $request->lang);
                                 return response()->json($response , 406);
                             }
-                            $single_product = Product::select('id', 'remaining_quantity')->where('id', $store_products[$n]['product_id'])->first();
+                            $single_product = Product::select('id', 'remaining_quantity', 'free')->where('id', $store_products[$n]['product_id'])->first();
                             $single_product->remaining_quantity = $single_product->remaining_quantity - $store_products[$n]['count'];
                             $single_product->save();
+                            $productCount = $store_products[$n]['count'];
+                            if ($single_product['free'] && $productCount % 3 == 0) {
+                                $productCount = $productCount - 1;
+                            }
 
-                            $subtotal_price = $subtotal_price + ($store_products[$n]->product->final_price * $store_products[$n]['count']);
-
+                            $subtotal_price = $subtotal_price + ($store_products[$n]->product->final_price * $productCount);
                         }
                     }
 
@@ -176,20 +179,16 @@ class OrderController extends Controller
                                 $response = APIHelpers::createApiResponse(true , 406 , 'The remaining amount of the product is not enough' , 'الكميه المتبقيه من المنتج غير كافيه'  , null , $request->lang);
                                 return response()->json($response , 406);
                             }
-                            $single_product = Product::select('id', 'remaining_quantity')->where('id', $store_products[$n]['product_id'])->first();
+                            $single_product = Product::select('id', 'remaining_quantity', 'free')->where('id', $store_products[$n]['product_id'])->first();
                             $single_product->remaining_quantity = $single_product->remaining_quantity - $store_products[$n]['count'];
                             $single_product->save();
-                            $subtotal_price = $subtotal_price + ($store_products[$n]->product->final_price * $store_products[$n]['count']);
+                            $productCount = $store_products[$n]['count'];
+                            if ($single_product['free'] && $productCount % 3 == 0) {
+                                $productCount = $productCount - 1;
+                            }
+                            $subtotal_price = $subtotal_price + ($store_products[$n]->product->final_price * $productCount);
                             
                         }
-                    }
-    
-                    $shop = Shop::where('id', $unrepeated_stores[$i])->select('min_order_cost')->first();
-                    if ($subtotal_price < $shop['min_order_cost']) {
-                        $d_main_order = MainOrder::find($main_order['id']);
-                        $d_main_order->delete();
-                        $response = APIHelpers::createApiResponse(true , 406 , 'Minimum Order Cost for Store ' . $shop['name'] . ' is ' . $shop['min_order_cost'] . ' KWD' , 'الحد الأدنى لقيمة الطلب من متجر ' . $shop['name'] . ' هو ' . $shop['min_order_cost'] . ' د.ك'  , null , $request->lang);
-                        return response()->json($response , 406);
                     }
                     
                     $delivery = DeliveryArea::select('delivery_cost')->where('area_id', $address['area_id'])->where('store_id', $unrepeated_stores[$i])->first();
@@ -283,20 +282,23 @@ class OrderController extends Controller
                         $subtotal_price = 0;
                         for ($n = 0; $n < count($store_products); $n ++) {
                             if($store_products[$n]->product->remaining_quantity < $store_products[$n]['count']){
-
                                 $response = APIHelpers::createApiResponse(true , 406 , 'The remaining amount of the product is not enough' , 'الكميه المتبقيه من المنتج غير كافيه'  , null , $request->lang);
                                 return response()->json($response , 406);
                             }
-                            $single_product = Product::select('id', 'remaining_quantity')->where('id', $store_products[$n]['product_id'])->first();
+                            $single_product = Product::select('id', 'remaining_quantity', 'free')->where('id', $store_products[$n]['product_id'])->first();
                             $single_product->remaining_quantity = $single_product->remaining_quantity - $store_products[$n]['count'];
                             $single_product->save();
-                            if ($store_products[$n]['option_id'] != 0) {
-                                $m_option = ProductMultiOption::find($store_products[$n]['option_id']);
-                                $subtotal_price = $subtotal_price + ($m_option['final_price'] * $store_products[$n]['count']);
-                                $m_option->remaining_quantity = $m_option->remaining_quantity - $store_products[$n]['count'];
-                            }else {
-                                $subtotal_price = $subtotal_price + ($store_products[$n]->product->final_price * $store_products[$n]['count']);
+                            $productCount = $store_products[$n]['count'];
+                            if ($single_product['free'] && $productCount % 3 == 0) {
+                                $productCount = $productCount - 1;
                             }
+                            // if ($store_products[$n]['option_id'] != 0) {
+                            //     $m_option = ProductMultiOption::find($store_products[$n]['option_id']);
+                            //     $subtotal_price = $subtotal_price + ($m_option['final_price'] * $store_products[$n]['count']);
+                            //     $m_option->remaining_quantity = $m_option->remaining_quantity - $store_products[$n]['count'];
+                            // }else {
+                            $subtotal_price = $subtotal_price + ($store_products[$n]->product->final_price * $productCount);
+                            // }
                         }
                     }
 
@@ -338,7 +340,7 @@ class OrderController extends Controller
                         $delivery = Setting::find(1);
                     }
                     $total_cost = $delivery['delivery_cost'] + $subtotal_price;
-
+                    
                     $total_price = $total_price + $total_cost;
                 }
             }
@@ -353,6 +355,7 @@ class OrderController extends Controller
             'Authorization:' .$token,
             'Content-Type:application/json'
         );
+        
             $price = $total_price;
             $call_back_url = $root_url."/api/order/excute_pay?user_id=".$user->id."&unique_id=".$request->unique_id."&address_id=".$request->address_id."&payment_method=".$request->payment_method;
             $error_url = $root_url."/api/pay/error";
@@ -362,7 +365,7 @@ class OrderController extends Controller
 				"InvoiceValue" => $price,
 				"CallBackUrl" => $call_back_url,
 				"ErrorUrl" => $error_url,
-				"Language" => "AR",
+				"Language" => strtoupper($request->lang),
 				"CustomerEmail" => $user->email
         	);
 

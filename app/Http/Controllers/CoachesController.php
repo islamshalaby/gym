@@ -215,10 +215,21 @@ class CoachesController extends Controller
     {
         $credentials = request(['phone', 'password']);
         $input = $request->all();
+		$messages = [
+            'phone.required' => 'phone is required field',
+            'password.required' => 'password is required field'
+        ];
+
+        if ($request->lang == 'ar') {
+            $messages = [
+                'phone.required' => 'رقم الهاتف حقل مطلوب',
+                'password.required' => 'كلمة المرور حقل مطلوب'
+            ];
+        }
         $validate = Validator::make($input, [
             'phone' => 'required',
             'password' => 'required',
-        ]);
+        ], $messages);
         if (!is_array($validate)) {
             if (Auth::guard('coach')->attempt($credentials)) {
                 $user = auth()->guard('coach')->user();
@@ -238,9 +249,12 @@ class CoachesController extends Controller
                 $response = APIHelpers::createApiResponse(false, 200, 'login successfully', 'تم تسجيل الدخول', $user, $request->lang);
                 return response()->json($response, 200);
             } else {
-                $response = APIHelpers::createApiResponse(true, 406, 'Missing Required Fields', 'بعض الحقول مفقودة', null, $request->lang);
+                $response = APIHelpers::createApiResponse(true, 406, 'Unregistered phone or Invalid password' , ' رقم الهاتف غير موجود او كلمة المرور غير صحيحة', null, $request->lang);
                 return response()->json($response, 406);
             }
+        }else {
+            $response = APIHelpers::createApiResponse(true , 406 ,  $validate->messages()->first(), $validate->messages()->first() , null, $request->lang);
+            return response()->json($response , 406);
         }
     }
 
@@ -281,6 +295,35 @@ class CoachesController extends Controller
     public function register(Request $request)
     {
         $input = $request->all();
+		$messages = [
+            'name.required' => 'name is required field',
+            'name_en.required' => 'name is required field',
+            "age.required" => 'age is required field',
+            "exp.required" => 'experience is required field',
+            "gender.required" => "gender is required field",
+            "image.required" => "image is required field",
+            "email.required" => "email is required field",
+            "email.unique" => "email is already exist",
+            "phone.required" => "phone is required field",
+            "phone.unique" => "phone is already exist",
+            'password.required' => 'password is required field'
+        ];
+
+        if ($request->lang == 'ar') {
+            $messages = [
+                'name.required' => 'الاسم حقل مطلوب',
+                'name_en.required' => 'الاسم حقل مطلوب',
+                "age.required" => 'العمر حقل مطلوب',
+                "exp.required" => 'الخبرة حقل مطلوب',
+                "gender.required" => "الجنس حقل مطلوب",
+                "image.required" => "صورة الملف الشخصى حقل مطلوب",
+                "email.required" => "البريد الإلكترونى حقل مطلوب",
+                "email.unique" => "البريد الإلكترونى موجود من قبل",
+                "phone.required" => "رقم الهاتف حقل مطلوب",
+                "phone.unique" => "رقم الهاتف موجود من قبل",
+                'password.required' => 'كلمة المرور حقل مطلوب'
+            ];
+        }
         $validator = Validator::make($request->all(), [
             'name' => 'required',
             'name_en' => 'required',
@@ -296,7 +339,7 @@ class CoachesController extends Controller
             "fcm_token" => 'required',
             "type" => "required", // 1 -> iphone , 2 -> android
             "unique_id" => "required",
-        ]);
+        ], $messages);
         if ($validator->fails()) {
             $response = APIHelpers::createApiResponse(true, 406, $validator->errors()->first(), $validator->errors()->first(), null, $request->lang);
             return response()->json($response, 406);
@@ -517,6 +560,8 @@ class CoachesController extends Controller
             return response()->json($response, 406);
         } else {
             $data = Coach_booking::select('id', 'name_ar', 'name_en', 'title_ar', 'title_en', 'price', 'is_discount', 'discount', 'discount_price', 'months_num')->find($id);
+			$data['details'] = Coach_booking_detail::where('booking_id', $data->id)->get();
+			//dd($data);
             $response = APIHelpers::createApiResponse(false, 200, '', '', $data, $request->lang);
             return response()->json($response, 200);
         }
@@ -573,6 +618,28 @@ class CoachesController extends Controller
             $response = APIHelpers::createApiResponse(true, 406, 'you should login', 'يجب تسجيل الدخول', null, $request->lang);
             return response()->json($response, 406);
         }
+        $messages = [
+            "name_ar.required" => "Arabice name is required field",
+            "name_en.required" => "English name is required field",
+            "title_ar.required" => "Title is required field",
+            "price.required" => "Price is required field",
+            "months_num.required" => "Months number is required field",
+            "months_num.numeric" => "Months number must be number",
+            "is_discount.required" => "Is discount field is required",
+            "details.required" => "Details is required field"
+        ];
+        if ($request->lang == 'ar') {
+            $messages = [
+                "name_ar.required" => "الاسم باللغة العربية حقل مطلوب",
+                "name_en.required" => "الاسم باللغة الإنجليزية حقل مطلوب",
+                "title_ar.required" => "العنوان حقل مطلوب",
+                "price.required" => "السعر حقل مطلوب",
+                "months_num.required" => "عدد الشهور حقل مطلوب",
+                "months_num.numeric" => "عدد الشهور يجب أن يكون رقماً",
+                "is_discount.required" => "خصم ؟ حقل مطلوب",
+                "details.required" => "التفاصيل حقل مطلوب"
+            ];
+        }
         $validator = Validator::make($input, [
             'name_ar' => 'required',
             'name_en' => 'required',
@@ -583,7 +650,7 @@ class CoachesController extends Controller
             'discount' => '',
             'discount_price' => '',
             'details' => 'required',
-        ]);
+        ], $messages);
         if ($validator->fails()) {
             $response = APIHelpers::createApiResponse(true, 406, $validator->messages()->first(), $validator->messages()->first(), $validator->messages()->first(), $request->lang);
             return response()->json($response, 406);

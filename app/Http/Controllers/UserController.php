@@ -95,17 +95,17 @@ class UserController extends Controller
         ]);
 
         if($validator->fails()) {
-            $response = APIHelpers::createApiResponse(true , 406 ,  'بعض الحقول مفقودة', '' , null, $request->lang );
+            $response = APIHelpers::createApiResponse(true , 406 ,  'password and old password are required field', 'كلمة المرور وكلمة المرور السابقة حقول مطلوبة' , null, $request->lang );
             return response()->json($response , 406);
         }
 
         $user = auth()->user();
 		if(!Hash::check($request->old_password, $user->password)){
-			$response = APIHelpers::createApiResponse(true , 406 ,  'كلمه المرور السابقه خطأ', '' , null, $request->lang );
+			$response = APIHelpers::createApiResponse(true , 406 ,  'Old password is required field', 'كلمه المرور السابقه خطأ' , null, $request->lang );
             return response()->json($response , 406);
 		}
 		if($request->old_password == $request->password){
-			$response = APIHelpers::createApiResponse(true , 406 ,  'لا يمكنك تعيين نفس كلمه المرور السابقه', '' , null, $request->lang );
+			$response = APIHelpers::createApiResponse(true , 406 ,  'You cannot set the same password as before', 'لا يمكنك تعيين نفس كلمه المرور السابقه' , null, $request->lang );
             return response()->json($response , 406);
 		}
         User::where('id' , $user->id)->update(['password' => Hash::make($request->password)]);
@@ -121,13 +121,13 @@ class UserController extends Controller
         ]);
 
         if($validator->fails()) {
-            $response = APIHelpers::createApiResponse(true , 406 ,  'بعض الحقول مفقودة', '' , null, $request->lang );
+            $response = APIHelpers::createApiResponse(true , 406 ,  'Unregistered phone number or Invalid password', 'رقم هاتف غير مسجل أو كلمة مرور غير صحيحة' , null, $request->lang );
             return response()->json($response , 406);
         }
 
         $user = User::where('phone', $request->phone)->first();
         if(! $user){
-            $response = APIHelpers::createApiResponse(true , 403 ,  'رقم الهاتف غير موجود', '' , null, $request->lang );
+            $response = APIHelpers::createApiResponse(true , 403 ,  'Unregistered phone number', 'رقم الهاتف غير مسجل' , null, $request->lang );
             return response()->json($response , 403);
         }
 
@@ -148,7 +148,7 @@ class UserController extends Controller
             'phone' => 'required'
         ]);
         if($validator->fails()) {
-            $response = APIHelpers::createApiResponse(true , 406 ,  'حقل الهاتف اجباري', '' , null, $request->lang );
+            $response = APIHelpers::createApiResponse(true , 406 ,  'phone is required field', 'حقل الهاتف اجباري' , null, $request->lang );
             return response()->json($response , 406);
         }
         $user = User::where('phone' , $request->phone)->first();
@@ -156,7 +156,7 @@ class UserController extends Controller
             $response = APIHelpers::createApiResponse(false , 200 ,  '', '' , $user, $request->lang );
             return response()->json($response , 200);
         }
-        $response = APIHelpers::createApiResponse(true , 403 ,  'الهاتف غير موجود من قبل', '' , null, $request->lang );
+        $response = APIHelpers::createApiResponse(true , 403 ,  'Unregistered phone number', 'رقم الهاتف غير مسجل' , null, $request->lang );
         return response()->json($response , 403);
     }
 
@@ -167,7 +167,7 @@ class UserController extends Controller
         ]);
 
         if($validator->fails()) {
-            $response = APIHelpers::createApiResponse(true , 406 , 'Missing Required Fields' , 'حقل الهاتف اجباري' , (object)[] , $request->lang);
+            $response = APIHelpers::createApiResponse(true , 406 , 'phone is required field' , 'حقل الهاتف اجباري' , (object)[] , $request->lang);
             return response()->json($response , 406);
         }
 
